@@ -1,17 +1,18 @@
+// App.jsx - Complete file
 import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import HomeApp from "./pages/HomeApp";
 import Home from "./pages/TodoPage/Home";
 import Todo from "./pages/TodoPage/Todo";
-import { Toaster } from "react-hot-toast"; // ✅ Toaster import karein
+import Admin from "./Admin/Admin"; // ✅ Admin import
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
 
   return (
     <>
-      {/* ✅ Global Toaster Component - Sab pages ke liye */}
       <Toaster
         position="top-center"
         toastOptions={{
@@ -69,7 +70,19 @@ export default function App() {
           element={token ? <Todo setToken={setToken} /> : <Navigate to="/login" />}
         />
 
-        {/* 4️⃣ CATCH ALL → HOMEAPP */}
+        {/* 4️⃣ ADMIN PANEL ROUTE - WITH ROLE CHECK */}
+        <Route
+          path="/admin"
+          element={
+            token && localStorage.getItem("role") === "admin" ? (
+              <Admin />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* 5️⃣ CATCH ALL → HOMEAPP */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </>

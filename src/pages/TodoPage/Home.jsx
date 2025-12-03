@@ -17,12 +17,13 @@ export default function Home({ setToken }) {
   const handleSubmit = async (e) => {
   e.preventDefault();
   
-  // ... validation code same ...
 
   try {
     setIsSubmitting(true);
 
     // Try MongoDB first
+
+
     const res = await axios.post("http://localhost:5000/api/feedback/create", {
       name,
       email,

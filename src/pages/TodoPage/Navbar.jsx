@@ -81,7 +81,7 @@ const Navbar = ({ setToken }) => {
 
       {/* ✅ Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 bg-opacity-0  z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-sm md:w-80 text-center">
             <h2 className="text-xl font-bold mb-4 text-gray-800">Confirm Logout</h2>
             <p className="mb-6 text-gray-600">Are you sure you want to logout?</p>

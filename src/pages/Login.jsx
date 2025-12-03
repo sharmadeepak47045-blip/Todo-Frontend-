@@ -6,8 +6,6 @@ import toast from "react-hot-toast";
 
 const Login = ({ setToken }) => {
   const nav = useNavigate();
-
-  // ✅ Environment variable use karein
   const API = import.meta.env.VITE_API_BASE_URL;
 
   const [state, setState] = useState("Signup");
@@ -37,73 +35,75 @@ const Login = ({ setToken }) => {
     setLoading(true);
 
     if (state === "Signup") {
-      // Signup validation
-      if (!formData.name.trim()) {
-        toast.error("Name is required");
-        setLoading(false);
-        return;
+      // ✅ Signup validation logic
+      if (!formData.name.trim()) { 
+        toast.error("Name is required"); 
+        setLoading(false); 
+        return; 
       }
-      if (formData.name.trim().length < 3) {
-        toast.error("Name must be at least 3 characters");
-        setLoading(false);
-        return;
+      if (formData.name.trim().length < 3) { 
+        toast.error("Name must be at least 3 characters"); 
+        setLoading(false); 
+        return; 
       }
-
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        toast.error("Enter a valid email address");
-        setLoading(false);
-        return;
+      if (!emailRegex.test(formData.email)) { 
+        toast.error("Enter a valid email address"); 
+        setLoading(false); 
+        return; 
       }
-
-      if (formData.password.length < 6) {
-        toast.error("Password must be at least 6 characters");
-        setLoading(false);
-        return;
+      if (formData.password.length < 6) { 
+        toast.error("Password must be at least 6 characters"); 
+        setLoading(false); 
+        return; 
       }
-
       const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-      if (!strongPassword.test(formData.password)) {
-        toast.error("Password must contain uppercase, lowercase, number & special character");
-        setLoading(false);
-        return;
+      if (!strongPassword.test(formData.password)) { 
+        toast.error("Password must contain uppercase, lowercase, number & special character"); 
+        setLoading(false); 
+        return; 
       }
 
       try {
-        // ✅ Environment variable use karein
-        const response = await axios.post(`${API}/auth/signup`, formData);
+        await axios.post(`${API}/auth/signup`, formData);
         toast.success("Signup Success ✅");
-        
-        // Switch to login after signup
         setState("Login");
         setFormData({ name: "", email: "", password: "" });
       } catch (err) {
         toast.error(err.response?.data?.message || "Signup failed");
-      } finally {
-        setLoading(false);
+      } finally { 
+        setLoading(false); 
       }
+
     } else {
-      // Login
+      // ✅ Login logic
       try {
-        // ✅ Environment variable use karein
-        const res = await axios.post(
-          `${API}/auth/login`,
-          {
-            email: formData.email,
-            password: formData.password
-          }
-        );
-        
-        // ✅ Check for token instead of success
+        const res = await axios.post(`${API}/auth/login`, {
+          email: formData.email,
+          password: formData.password
+        });
+console.log(res.data,"===res")
         if (res.data.token) {
           toast.success("Login Success ✅");
 
-          // ✅ Save token to localStorage & App state
+          // ✅ Save token & role properly
           localStorage.setItem("token", res.data.token);
+          localStorage.setItem("role", res.data.user?.role);
           setToken(res.data.token);
 
-          // ✅ Direct navigation
-          nav("/home", { replace: true });
+          // ✅ FIXED: Role-based navigation with proper checks
+          const userRole = res.data.user?.role;
+          // Clear any previous state
+          setTimeout(() => {
+            if (userRole === "admin") {
+              // Admin ko admin panel par redirect karo
+              window.location.href = "/admin";
+            } else {
+              // Normal user ko home par redirect karo
+              nav("/home", { replace: true });
+            }
+          }, 500);
+
         } else {
           toast.error(res.data.message || "Login failed - No token received");
         }
@@ -173,7 +173,6 @@ const Login = ({ setToken }) => {
               name="password"
               type="password"
               placeholder="Password"
-              autoComplete="off"
               required
               className="text-white placeholder-white outline-none w-full bg-transparent"
               disabled={loading}
@@ -182,7 +181,7 @@ const Login = ({ setToken }) => {
 
           <p
             onClick={() => !loading && nav("/reset-Password")}
-            className={`mb-4 cursor-pointer ${loading ? 'text-gray-500' : 'text-indigo-500'}`}
+            className={`mb-4 cursor-pointer ${loading ? "text-gray-500" : "text-indigo-500"}`}
           >
             Forgot Password?
           </p>
@@ -191,9 +190,9 @@ const Login = ({ setToken }) => {
             type="submit"
             disabled={loading}
             className={`w-full py-2.5 rounded-full text-white font-medium ${
-              loading 
-                ? 'bg-gray-500 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-indigo-500 to-indigo-900'
+              loading
+                ? "bg-gray-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-indigo-500 to-indigo-900"
             }`}
           >
             {loading ? "Processing..." : state}
@@ -205,7 +204,7 @@ const Login = ({ setToken }) => {
             Already have an account?{" "}
             <span
               onClick={() => !loading && setState("Login")}
-              className={`cursor-pointer ${loading ? 'text-gray-500' : 'text-blue-400 underline'}`}
+              className={`cursor-pointer ${loading ? "text-gray-500" : "text-blue-400 underline"}`}
             >
               Login here
             </span>
@@ -215,7 +214,7 @@ const Login = ({ setToken }) => {
             Don't have an account?{" "}
             <span
               onClick={() => !loading && setState("Signup")}
-              className={`cursor-pointer ${loading ? 'text-gray-500' : 'text-blue-400 underline'}`}
+              className={`cursor-pointer ${loading ? "text-gray-500" : "text-blue-400 underline"}`}
             >
               Sign up
             </span>
