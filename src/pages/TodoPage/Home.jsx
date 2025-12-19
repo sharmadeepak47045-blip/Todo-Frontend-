@@ -1,9 +1,10 @@
 // src/TodoPage/Home.jsx
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { FaStar, FaRocket, FaTasks, FaEdit, FaBolt, FaLightbulb, FaChartLine, FaHeart, FaUsers, FaCheckCircle } from "react-icons/fa";
 
 export default function Home({ setToken }) {
   const navigate = useNavigate();
@@ -14,164 +15,217 @@ export default function Home({ setToken }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  try {
-    setIsSubmitting(true);
-
-    // Try MongoDB first
-
-
-    const res = await axios.post("http://localhost:5000/api/feedback/create", {
-      name,
-      email,
-      rating,
-      feedback,
-    });
-
-    if (res.data.success) {
-      console.log("✅ Saved to MongoDB");
-      toast.success("Saved to database! ✅");
+  useEffect(() => {
+    const savedUser = JSON.parse(localStorage.getItem("user"));
+    if (savedUser) {
+      setName(savedUser.name || "");
+      setEmail(savedUser.email || "");
     }
-    
-    // ... rest of success code ...
+  }, []);
 
-  } catch (error) {
-    console.error("MongoDB failed, saving ");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     
+    if (rating === 0) {
+      toast.error("Please select a rating!");
+      return;
+    }
 
-   
-    
-    
-  }
-};
+    if (!feedback.trim()) {
+      toast.error("Please enter your feedback!");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const res = await axios.post(
+        `${API_BASE_URL}/feedback/create`,
+        {
+          name,
+          email,
+          rating,
+          feedback: feedback.trim(),
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (res.data.success) {
+        toast.success("Thank you for your feedback! ✅");
+        setFeedback("");
+        setRating(0);
+        setShowFeedback(false);
+        console.log("✅ Feedback saved successfully");
+      }
+    } catch (error) {
+      console.error("❌ Error:", error);
+      
+      if (error.response) {
+        toast.error(`Server Error: ${error.response.data.message || "Failed to save feedback"}`);
+      } else if (error.request) {
+        toast.error("Network Error: Cannot connect to server");
+      } else {
+        toast.error("Error: " + error.message);
+      }
+      
+      setFeedback("");
+      setRating(0);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setShowFeedback(false);
+    setFeedback("");
+    setRating(0);
+    setIsSubmitting(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-800">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-teal-900 to-cyan-900">
       <Navbar setToken={setToken} />
       
-      {/* Main Content - Full Screen */}
+      {/* Main Content */}
       <div className="min-h-screen flex">
-        {/* Left Side - Welcome Content */}
-        <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-8 md:p-12 lg:p-16 xl:p-20">
-          <div className="text-center max-w-4xl w-full">
+        {/* Welcome Content */}
+        <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-8 md:p-12 lg:p-16">
+          <div className="text-center max-w-6xl w-full">
             {/* Main Heading */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 text-white leading-tight">
-              Welcome to <span className="text-yellow-400">iTask</span>
-            </h1>
-            
-            {/* Sub Heading */}
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold mb-8 text-gray-200">
-              Your Ultimate Task Management Solution
-            </h2>
-            
-            {/* Description */}
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-10 text-gray-300 leading-relaxed max-w-3xl mx-auto">
-              Organize your life, boost your productivity, and achieve your goals with our powerful task management system.
-            </p>
+            <div className="mb-8">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 bg-gradient-to-r from-white via-teal-200 to-cyan-200 bg-clip-text text-transparent">
+                Welcome to <span className="text-teal-400">TaskMaster</span>
+              </h1>
+              
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-6 text-gray-300">
+                Your Ultimate Task Management Solution
+              </h2>
+              
+              <p className="text-lg sm:text-xl md:text-2xl mb-10 text-gray-400 leading-relaxed max-w-3xl mx-auto">
+                Organize your life, boost productivity, and achieve your goals with our powerful task management system.
+              </p>
+            </div>
 
-            {/* Features Grid with Hover Effects */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 max-w-4xl mx-auto">
-              {/* Card 1 - Easy Creation */}
+            {/* Features Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 max-w-5xl mx-auto">
+              {/* Card 1 */}
               <div 
                 onClick={() => navigate("/todo")}
-                className="group relative bg-white/10 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border-2 border-white/20 text-center transition-all duration-300 hover:scale-105 hover:bg-white/20 hover:border-yellow-400/50 hover:shadow-2xl hover:shadow-yellow-500/20 cursor-pointer"
+                className="group relative bg-gray-800/40 backdrop-blur-sm p-6 rounded-xl border border-teal-500/30 text-center transition-all duration-300 hover:scale-105 hover:bg-teal-900/30 hover:border-teal-400/50 hover:shadow-xl hover:shadow-teal-500/10 cursor-pointer"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 rounded-2xl group-hover:from-yellow-500/10 group-hover:to-yellow-500/20 transition-all duration-500"></div>
                 <div className="relative z-10">
-                  <div className="text-3xl mb-3 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">📝</div>
-                  <h3 className="text-white font-semibold text-lg sm:text-xl mb-2 group-hover:text-yellow-300 transition-colors duration-300">Easy Creation</h3>
-                  <p className="text-gray-300 text-sm sm:text-base group-hover:text-gray-200 transition-colors duration-300">Create tasks in seconds</p>
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaTasks className="text-2xl text-white" />
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-teal-300 transition-colors">Easy Creation</h3>
+                  <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Create tasks in seconds</p>
                   <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <span className="text-yellow-400 text-xs font-semibold">Click to try →</span>
+                    <span className="text-teal-400 text-xs font-semibold">Click to try →</span>
                   </div>
                 </div>
               </div>
               
-              {/* Card 2 - Fast Editing */}
+              {/* Card 2 */}
               <div 
                 onClick={() => navigate("/todo")}
-                className="group relative bg-white/10 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border-2 border-white/20 text-center transition-all duration-300 hover:scale-105 hover:bg-white/20 hover:border-yellow-400/50 hover:shadow-2xl hover:shadow-yellow-500/20 cursor-pointer"
+                className="group relative bg-gray-800/40 backdrop-blur-sm p-6 rounded-xl border border-teal-500/30 text-center transition-all duration-300 hover:scale-105 hover:bg-teal-900/30 hover:border-teal-400/50 hover:shadow-xl hover:shadow-teal-500/10 cursor-pointer"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 rounded-2xl group-hover:from-yellow-500/10 group-hover:to-yellow-500/20 transition-all duration-500"></div>
                 <div className="relative z-10">
-                  <div className="text-3xl mb-3 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-300">⚡</div>
-                  <h3 className="text-white font-semibold text-lg sm:text-xl mb-2 group-hover:text-yellow-300 transition-colors duration-300">Fast Editing</h3>
-                  <p className="text-gray-300 text-sm sm:text-base group-hover:text-gray-200 transition-colors duration-300">Update with one click</p>
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaBolt className="text-2xl text-white" />
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-teal-300 transition-colors">Fast Editing</h3>
+                  <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Update with one click</p>
                   <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <span className="text-yellow-400 text-xs font-semibold">Click to try →</span>
+                    <span className="text-teal-400 text-xs font-semibold">Click to try →</span>
                   </div>
                 </div>
               </div>
               
-              {/* Card 3 - Smart Organization */}
+              {/* Card 3 */}
               <div 
                 onClick={() => navigate("/todo")}
-                className="group relative bg-white/10 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border-2 border-white/20 text-center transition-all duration-300 hover:scale-105 hover:bg-white/20 hover:border-yellow-400/50 hover:shadow-2xl hover:shadow-yellow-500/20 cursor-pointer"
+                className="group relative bg-gray-800/40 backdrop-blur-sm p-6 rounded-xl border border-teal-500/30 text-center transition-all duration-300 hover:scale-105 hover:bg-teal-900/30 hover:border-teal-400/50 hover:shadow-xl hover:shadow-teal-500/10 cursor-pointer"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 rounded-2xl group-hover:from-yellow-500/10 group-hover:to-yellow-500/20 transition-all duration-500"></div>
                 <div className="relative z-10">
-                  <div className="text-3xl mb-3 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">🎯</div>
-                  <h3 className="text-white font-semibold text-lg sm:text-xl mb-2 group-hover:text-yellow-300 transition-colors duration-300">Smart Organization</h3>
-                  <p className="text-gray-300 text-sm sm:text-base group-hover:text-gray-200 transition-colors duration-300">Stay focused and productive</p>
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaLightbulb className="text-2xl text-white" />
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-teal-300 transition-colors">Smart Organization</h3>
+                  <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">Stay focused and productive</p>
                   <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <span className="text-yellow-400 text-xs font-semibold">Click to try →</span>
+                    <span className="text-teal-400 text-xs font-semibold">Click to try →</span>
                   </div>
                 </div>
               </div>
               
-              {/* Card 4 - Powerful Tools */}
+              {/* Card 4 */}
               <div 
                 onClick={() => navigate("/todo")}
-                className="group relative bg-white/10 backdrop-blur-sm p-4 sm:p-6 rounded-2xl border-2 border-white/20 text-center transition-all duration-300 hover:scale-105 hover:bg-white/20 hover:border-yellow-400/50 hover:shadow-2xl hover:shadow-yellow-500/20 cursor-pointer"
+                className="group relative bg-gray-800/40 backdrop-blur-sm p-6 rounded-xl border border-teal-500/30 text-center transition-all duration-300 hover:scale-105 hover:bg-teal-900/30 hover:border-teal-400/50 hover:shadow-xl hover:shadow-teal-500/10 cursor-pointer"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-500/0 rounded-2xl group-hover:from-yellow-500/10 group-hover:to-yellow-500/20 transition-all duration-500"></div>
                 <div className="relative z-10">
-                  <div className="text-3xl mb-3 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">🚀</div>
-                  <h3 className="text-white font-semibold text-lg sm:text-xl mb-2 group-hover:text-yellow-300 transition-colors duration-300">Powerful Tools</h3>
-                  <p className="text-gray-300 text-sm sm:text-base group-hover:text-gray-200 transition-colors duration-300">All features you need</p>
+                  <div className="inline-flex p-3 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <FaRocket className="text-2xl text-white" />
+                  </div>
+                  <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-teal-300 transition-colors">Powerful Tools</h3>
+                  <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">All features you need</p>
                   <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <span className="text-yellow-400 text-xs font-semibold">Click to try →</span>
+                    <span className="text-teal-400 text-xs font-semibold">Click to try →</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mb-12">
               <button
                 onClick={() => navigate("/todo")}
-                className="cursor-pointer transition-all duration-300 px-8 sm:px-12 py-4 sm:py-6 rounded-full border-2 bg-yellow-500 text-white font-bold border-yellow-400 shadow-2xl hover:bg-yellow-600 hover:scale-105 hover:shadow-yellow-500/30 text-xl sm:text-2xl lg:text-3xl transform hover:scale-105 w-full sm:w-auto"
+                className="group flex items-center gap-3 cursor-pointer transition-all duration-300 px-8 py-4 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-bold shadow-lg hover:from-teal-500 hover:to-cyan-500 hover:scale-105 hover:shadow-teal-500/30 text-lg sm:text-xl"
               >
-                🚀 Start Managing Tasks
+                <FaRocket className="group-hover:rotate-12 transition-transform" />
+                Start Managing Tasks
               </button>
               
               <button
                 onClick={() => setShowFeedback(true)}
-                className="cursor-pointer transition-all duration-300 px-8 sm:px-12 py-4 sm:py-6 rounded-full border-2 bg-green-500 text-white font-bold border-green-400 shadow-2xl hover:bg-green-600 hover:scale-105 hover:shadow-green-500/30 text-xl sm:text-2xl lg:text-3xl transform hover:scale-105 w-full sm:w-auto"
+                className="group flex items-center gap-3 cursor-pointer transition-all duration-300 px-8 py-4 rounded-full bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold shadow-lg hover:from-emerald-500 hover:to-green-500 hover:scale-105 hover:shadow-emerald-500/30 text-lg sm:text-xl"
               >
-                💬 Give Feedback
+                <FaStar className="group-hover:scale-125 transition-transform" />
+                Give Feedback
               </button>
             </div>
 
             {/* Stats */}
-            <div className="mt-12 flex justify-center gap-8 sm:gap-12 lg:gap-16 text-white flex-wrap">
-              <div className="text-center group cursor-pointer transition-all duration-300 hover:scale-110">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-yellow-400 group-hover:text-yellow-300 transition-colors duration-300">1K+</div>
-                <div className="text-sm sm:text-base lg:text-lg group-hover:text-gray-200 transition-colors duration-300">Active Users</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+              <div className="text-center p-4 rounded-xl bg-gray-800/40 backdrop-blur-sm border border-teal-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div className="text-3xl font-bold text-teal-400 mb-2">1K+</div>
+                <div className="text-gray-300 text-sm">Active Users</div>
+                <FaUsers className="mx-auto mt-2 text-teal-500/50" />
               </div>
-              <div className="text-center group cursor-pointer transition-all duration-300 hover:scale-110">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-yellow-400 group-hover:text-yellow-300 transition-colors duration-300">10K+</div>
-                <div className="text-sm sm:text-base lg:text-lg group-hover:text-gray-200 transition-colors duration-300">Tasks Created</div>
+              
+              <div className="text-center p-4 rounded-xl bg-gray-800/40 backdrop-blur-sm border border-teal-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div className="text-3xl font-bold text-teal-400 mb-2">10K+</div>
+                <div className="text-gray-300 text-sm">Tasks Created</div>
+                <FaTasks className="mx-auto mt-2 text-teal-500/50" />
               </div>
-              <div className="text-center group cursor-pointer transition-all duration-300 hover:scale-110">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-yellow-400 group-hover:text-yellow-300 transition-colors duration-300">★ 4.9</div>
-                <div className="text-sm sm:text-base lg:text-lg group-hover:text-gray-200 transition-colors duration-300">User Rating</div>
+              
+              <div className="text-center p-4 rounded-xl bg-gray-800/40 backdrop-blur-sm border border-teal-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div className="text-3xl font-bold text-teal-400 mb-2">★ 4.9</div>
+                <div className="text-gray-300 text-sm">User Rating</div>
+                <FaChartLine className="mx-auto mt-2 text-teal-500/50" />
               </div>
-              <div className="text-center group cursor-pointer transition-all duration-300 hover:scale-110">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-yellow-400 group-hover:text-yellow-300 transition-colors duration-300">99%</div>
-                <div className="text-sm sm:text-base lg:text-lg group-hover:text-gray-200 transition-colors duration-300">Satisfaction</div>
+              
+              <div className="text-center p-4 rounded-xl bg-gray-800/40 backdrop-blur-sm border border-teal-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
+                <div className="text-3xl font-bold text-teal-400 mb-2">99%</div>
+                <div className="text-gray-300 text-sm">Satisfaction</div>
+                <FaHeart className="mx-auto mt-2 text-teal-500/50" />
               </div>
             </div>
           </div>
@@ -181,100 +235,99 @@ export default function Home({ setToken }) {
       {/* Feedback Modal */}
       {showFeedback && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 p-4">
-          <div className="bg-gradient-to-br from-white to-gray-100 rounded-3xl p-6 sm:p-8 md:p-10 max-w-md w-full border-2 border-gray-300 shadow-2xl">
-            <div className="text-center">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-gray-800">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 sm:p-8 max-w-md w-full border border-teal-500/30 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="inline-flex p-3 rounded-full bg-teal-500/20 mb-4 border border-teal-500/30">
+                <FaStar className="text-2xl text-teal-400" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 text-white">
                 Share Your Feedback
               </h2>
               
-              <p className="text-gray-600 mb-6 sm:mb-8 text-base sm:text-lg">
+              <p className="text-gray-400 text-sm">
                 We value your opinion! How was your experience?
               </p>
+            </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                {/* Name Input */}
-                <div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your Name"
-                    className="w-full px-4 py-3 sm:py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-base sm:text-lg transition-colors duration-300 hover:border-blue-400"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Name Input */}
+              <div>
+                <input
+                  type="text"
+                  value={name}
+                  disabled
+                  placeholder="Your Name"
+                  className="w-full bg-gray-700/50 px-4 py-3 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 cursor-not-allowed"
+                  required
+                />
+              </div>
 
-                {/* Email Input */}
-                <div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your Email"
-                    className="w-full px-4 py-3 sm:py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-base sm:text-lg transition-colors duration-300 hover:border-blue-400"
-                    required
-                  />
-                </div>
+              {/* Email Input */}
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  disabled
+                  placeholder="Your Email"
+                  className="w-full bg-gray-700/50 px-4 py-3 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 cursor-not-allowed"
+                  required
+                />
+              </div>
 
-                {/* Rating Stars */}
-                <div className="flex justify-center space-x-2">
+              {/* Rating Stars */}
+              <div className="text-center">
+                <div className="flex justify-center space-x-2 mb-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
-                      className={`text-3xl sm:text-4xl transition-all duration-300 hover:scale-125 ${
-                        star <= rating ? "text-yellow-500 scale-110" : "text-gray-300 hover:text-yellow-400"
+                      className={`text-2xl transition-all duration-300 hover:scale-110 ${
+                        star <= rating ? "text-yellow-500" : "text-gray-500 hover:text-yellow-400"
                       }`}
                     >
                       {star <= rating ? "★" : "☆"}
                     </button>
                   ))}
                 </div>
-                <div className="text-center text-sm text-gray-500">
-                  {rating === 0 ? "Select a rating" : `Selected: ${rating} star${rating > 1 ? 's' : ''}`}
+                <div className="text-sm text-gray-400">
+                  {rating === 0 ? "Select a rating" : `${rating} star${rating > 1 ? 's' : ''} selected`}
                 </div>
+              </div>
 
-                {/* Feedback Textarea */}
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="What do you think about iTask? Any suggestions?"
-                  className="w-full px-4 py-3 sm:py-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none resize-none text-base sm:text-lg transition-colors duration-300 hover:border-blue-400"
-                  rows="4"
-                  required
-                />
+              {/* Feedback Textarea */}
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="What do you think about TaskMaster? Any suggestions?"
+                className="w-full px-4 py-3 border border-gray-600/50 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:border-teal-500 focus:outline-none resize-none transition-colors"
+                rows="3"
+                required
+              />
 
-                {/* Action Buttons */}
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowFeedback(false);
-                      setName("");
-                      setEmail("");
-                      setFeedback("");
-                      setRating(0);
-                    }}
-                    className="flex-1 cursor-pointer transition-all duration-300 px-6 py-3 rounded-full border-2 bg-gray-100 text-gray-700 font-semibold border-gray-400 shadow-md hover:bg-gray-200 hover:scale-105 text-lg"
-                  >
-                    Cancel
-                  </button>
-                  
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`flex-1 cursor-pointer transition-all duration-300 px-6 py-3 rounded-full border-2 font-semibold shadow-md text-lg ${
-                      isSubmitting
-                        ? "bg-gray-100 text-gray-500 border-gray-400 cursor-not-allowed"
-                        : "bg-green-500 text-white border-green-600 hover:bg-green-600 hover:scale-105 hover:shadow-green-500/30"
-                    }`}
-                  >
-                    {isSubmitting ? "Submitting..." : "Submit"}
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 cursor-pointer transition-all duration-300 px-4 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-semibold"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className={`flex-1 cursor-pointer transition-all duration-300 px-4 py-3 rounded-lg font-semibold ${
+                    isSubmitting
+                      ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:opacity-90"
+                  }`}
+                >
+                  {isSubmitting ? "Submitting..." : "Submit"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

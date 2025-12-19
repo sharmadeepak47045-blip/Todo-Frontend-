@@ -5,6 +5,8 @@ import Login from "./pages/Login";
 import HomeApp from "./pages/HomeApp";
 import Home from "./pages/TodoPage/Home";
 import Todo from "./pages/TodoPage/Todo";
+import ResetPassword from "./pages/ResetPassword";
+
 import Admin from "./Admin/Admin"; // ✅ Admin import
 import { Toaster } from "react-hot-toast";
 
@@ -54,13 +56,13 @@ export default function App() {
         {/* 1️⃣ PUBLIC HOMEAPP PAGE */}
         <Route path="/" element={<HomeApp />} />
 
-        {/* 2️⃣ LOGIN/SIGNUP PAGE */}
         <Route
           path="/login"
           element={!token ? <Login setToken={setToken} /> : <Navigate to="/home" />}
         />
 
-        {/* 3️⃣ PRIVATE ROUTES */}
+  <Route path="/reset-password" element={<ResetPassword />} />
+
         <Route
           path="/home"
           element={token ? <Home setToken={setToken} /> : <Navigate to="/login" />}
@@ -70,7 +72,6 @@ export default function App() {
           element={token ? <Todo setToken={setToken} /> : <Navigate to="/login" />}
         />
 
-        {/* 4️⃣ ADMIN PANEL ROUTE - WITH ROLE CHECK */}
         <Route
           path="/admin"
           element={
@@ -82,7 +83,6 @@ export default function App() {
           }
         />
 
-        {/* 5️⃣ CATCH ALL → HOMEAPP */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </>

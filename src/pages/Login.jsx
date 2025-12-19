@@ -1,115 +1,100 @@
-import React, { useState, useEffect } from "react";
-import { assets } from "../assets/assets";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { auth, googleProvider } from "../firebase.jsx";
+import { signInWithPopup } from "firebase/auth";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle, FaTasks } from "react-icons/fa";
 
 const Login = ({ setToken }) => {
   const nav = useNavigate();
   const API = import.meta.env.VITE_API_BASE_URL;
 
-  const [state, setState] = useState("Signup");
+  const [state, setState] = useState("Login"); // Default to Login
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: ""
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (state === "Signup") {
-      setFormData({ name: "", email: "", password: "" });
-    }
+    if (state === "Signup") setFormData({ name: "", email: "", password: "" });
   }, [state]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      
+      const res = await axios.post(`${API}/auth/google`, { idToken });
+      
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("role", res.data.user.role);
+      
+      if (setToken) setToken(res.data.token);
+      
+      toast.success("Google login successful ✅");
+      
+      if (res.data.user.role === "admin") window.location.href = "/admin";
+      else window.location.href = "/home";
+      
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google login failed");
+    }
+  };
+
+  const handleForgotPassword = () => nav("/reset-password");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     if (state === "Signup") {
-      // ✅ Signup validation logic
-      if (!formData.name.trim()) { 
-        toast.error("Name is required"); 
-        setLoading(false); 
-        return; 
-      }
-      if (formData.name.trim().length < 3) { 
-        toast.error("Name must be at least 3 characters"); 
-        setLoading(false); 
-        return; 
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) { 
-        toast.error("Enter a valid email address"); 
-        setLoading(false); 
-        return; 
-      }
-      if (formData.password.length < 6) { 
-        toast.error("Password must be at least 6 characters"); 
-        setLoading(false); 
-        return; 
-      }
-      const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-      if (!strongPassword.test(formData.password)) { 
-        toast.error("Password must contain uppercase, lowercase, number & special character"); 
-        setLoading(false); 
-        return; 
-      }
+      if (!formData.name.trim()) return toast.error("Name is required") & setLoading(false);
+      if (!/^[A-Za-z\s]+$/.test(formData.name)) return toast.error("Name should contain only alphabets") & setLoading(false);
+      if (formData.name.trim().length < 3) return toast.error("Name must be at least 3 characters") & setLoading(false);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return toast.error("Enter a valid email address") & setLoading(false);
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(formData.password)) return toast.error("Password must be at least 8 characters with uppercase, lowercase, number & special character") & setLoading(false);
 
       try {
         await axios.post(`${API}/auth/signup`, formData);
-        toast.success("Signup Success ✅");
+        toast.success("Account created successfully! ✅");
         setState("Login");
         setFormData({ name: "", email: "", password: "" });
       } catch (err) {
         toast.error(err.response?.data?.message || "Signup failed");
-      } finally { 
-        setLoading(false); 
+      } finally {
+        setLoading(false);
       }
-
     } else {
-      // ✅ Login logic
       try {
         const res = await axios.post(`${API}/auth/login`, {
           email: formData.email,
           password: formData.password
         });
-console.log(res.data,"===res")
-        if (res.data.token) {
-          toast.success("Login Success ✅");
 
-          // ✅ Save token & role properly
+        if (res.data.token) {
+          toast.success("Login successful! ✅");
           localStorage.setItem("token", res.data.token);
+          localStorage.setItem("user", JSON.stringify(res.data.user));
           localStorage.setItem("role", res.data.user?.role);
           setToken(res.data.token);
 
-          // ✅ FIXED: Role-based navigation with proper checks
-          const userRole = res.data.user?.role;
-          // Clear any previous state
           setTimeout(() => {
-            if (userRole === "admin") {
-              // Admin ko admin panel par redirect karo
-              window.location.href = "/admin";
-            } else {
-              // Normal user ko home par redirect karo
-              nav("/home", { replace: true });
-            }
+            if (res.data.user?.role === "admin") window.location.href = "/admin";
+            else nav("/home", { replace: true });
           }, 500);
-
-        } else {
-          toast.error(res.data.message || "Login failed - No token received");
         }
       } catch (err) {
-        console.error("Login error:", err);
-        toast.error(err.response?.data?.message || "Login failed. Please try again.");
+        toast.error(err.response?.data?.message || "Login failed");
       } finally {
         setLoading(false);
       }
@@ -117,109 +102,147 @@ console.log(res.data,"===res")
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-6 sm:px-0 bg-gradient-to-br from-blue-200 to-purple-400">
-      <img
-        onClick={() => nav("/")}
-        src={assets.logo}
-        alt=""
-        className="absolute left-5 sm:left-20 top-5 w-28 sm:w-32 cursor-pointer"
-      />
-      <div className="bg-slate-900 p-10 rounded-lg shadow-lg w-full sm:w-96 text-indigo-300 text-sm">
-        <h2 className="text-3xl font-semibold text-white text-center mb-3">
-          {state === "Signup" ? "Create account" : "Login account!"}
-        </h2>
-        <p className="text-center text-sm mb-6">
-          {state === "Signup" ? "Create your account" : "Login your account!"}
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-teal-900 to-cyan-900 p-4">
+      <div className="w-full max-w-md">
+      
 
-        <form onSubmit={handleSubmit}>
-          {state === "Signup" && (
-            <div className="mb-4 flex items-center gap-3 w-full px-5 py-2.5 rounded-full bg-[#333A5C]">
-              <img src={assets.person_icon} alt="" />
-              <input
-                onChange={handleChange}
-                name="name"
-                value={formData.name}
-                type="text"
-                placeholder="Full Name"
-                autoComplete="off"
-                required
-                className="text-white placeholder-white outline-none w-full bg-transparent"
-                disabled={loading}
+        {/* Main Card */}
+        <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-8 border border-teal-500/30 shadow-2xl">
+          {/* Form Title */}
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {state === "Signup" ? "Create Your Account" : "Welcome Back"}
+            </h2>
+            <p className="text-gray-400 text-sm">
+              {state === "Signup" 
+                ? "Get started with your free account" 
+                : "Sign in to continue to your dashboard"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {state === "Signup" && (
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-teal-400">
+                  <FaUser />
+                </div>
+                <input 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleChange} 
+                  type="text" 
+                  placeholder="Full Name" 
+                  className="w-full pl-12 pr-4 py-3 bg-gray-700/50 border border-teal-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 transition-all"
+                />
+              </div>
+            )}
+
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-teal-400">
+                <FaEnvelope />
+              </div>
+              <input 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                type="email" 
+                placeholder="Email Address" 
+                className="w-full pl-12 pr-4 py-3 bg-gray-700/50 border border-teal-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 transition-all"
               />
             </div>
+
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-teal-400">
+                <FaLock />
+              </div>
+              <input 
+                name="password" 
+                value={formData.password} 
+                onChange={handleChange} 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Password" 
+                className="w-full pl-12 pr-12 py-3 bg-gray-700/50 border border-teal-500/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/20 transition-all"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-teal-300"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+
+            {state === "Login" && (
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <input type="checkbox" id="remember" className="w-4 h-4 text-teal-600 bg-gray-700 border-teal-500 rounded focus:ring-teal-500" />
+                  <label htmlFor="remember" className="ml-2 text-sm text-gray-400">Remember me</label>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={handleForgotPassword} 
+                  className="text-sm text-teal-400 hover:text-teal-300 hover:underline transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl font-semibold transition-all bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white hover:shadow-lg hover:shadow-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {state === "Signup" ? "Creating Account..." : "Signing In..."}
+                </>
+              ) : (
+                state === "Signup" ? "Create Account" : "Sign In"
+              )}
+            </button>
+          </form>
+
+          {state === "Login" && (
+            <>
+              <div className="flex items-center my-6">
+                <div className="flex-grow h-px bg-gray-700" />
+                <span className="px-4 text-sm text-gray-400">Or continue with</span>
+                <div className="flex-grow h-px bg-gray-700" />
+              </div>
+              <button 
+                onClick={handleGoogleLogin}
+                className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-xl border border-gray-300 transition-all duration-300"
+              >
+                <FaGoogle className="text-red-500" />
+                Continue with Google
+              </button>
+            </>
           )}
 
-          <div className="mb-4 flex items-center gap-3 w-full px-5 py-2.5 rounded-full bg-[#333A5C]">
-            <img src={assets.mail_icon} alt="" />
-            <input
-              name="email"
-              onChange={handleChange}
-              value={formData.email}
-              type="email"
-              placeholder="Email21@gmail.com"
-              autoComplete="off"
-              required
-              className="text-white placeholder-white outline-none w-full bg-transparent"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="mb-4 flex items-center gap-3 w-full px-5 py-2.5 rounded-full bg-[#333A5C]">
-            <img src={assets.lock_icon} alt="" />
-            <input
-              onChange={handleChange}
-              value={formData.password}
-              name="password"
-              type="password"
-              placeholder="Password"
-              required
-              className="text-white placeholder-white outline-none w-full bg-transparent"
-              disabled={loading}
-            />
-          </div>
-
-          <p
-            onClick={() => !loading && nav("/reset-Password")}
-            className={`mb-4 cursor-pointer ${loading ? "text-gray-500" : "text-indigo-500"}`}
-          >
-            Forgot Password?
-          </p>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2.5 rounded-full text-white font-medium ${
-              loading
-                ? "bg-gray-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-indigo-500 to-indigo-900"
-            }`}
-          >
-            {loading ? "Processing..." : state}
-          </button>
-        </form>
-
-        {state === "Signup" ? (
-          <p className="text-gray-400 text-center text-xs mt-4">
-            Already have an account?{" "}
-            <span
-              onClick={() => !loading && setState("Login")}
-              className={`cursor-pointer ${loading ? "text-gray-500" : "text-blue-400 underline"}`}
+          <div className="mt-8 pt-6 border-t border-gray-700/50 text-center">
+            <p className="text-gray-400 text-sm mb-2">
+              {state === "Signup" ? "Already have an account?" : "Don't have an account?"}
+            </p>
+            <button 
+              onClick={() => setState(state === "Signup" ? "Login" : "Signup")} 
+              className="text-teal-400 hover:text-teal-300 font-medium text-sm px-4 py-2 rounded-lg hover:bg-teal-500/10 transition-all"
             >
-              Login here
-            </span>
+              {state === "Signup" ? "Sign in instead" : "Create new account"}
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-6">
+          <p className="text-gray-500 text-xs">
+            By continuing, you agree to our Terms & Privacy Policy
           </p>
-        ) : (
-          <p className="text-gray-400 text-center text-xs mt-4">
-            Don't have an account?{" "}
-            <span
-              onClick={() => !loading && setState("Signup")}
-              className={`cursor-pointer ${loading ? "text-gray-500" : "text-blue-400 underline"}`}
-            >
-              Sign up
-            </span>
-          </p>
-        )}
+        </div>
       </div>
     </div>
   );

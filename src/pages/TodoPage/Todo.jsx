@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { FaEdit, FaCheck, FaPlus, FaTrash, FaClipboardList, FaRegCheckCircle, FaRegCircle, FaTimes, FaBars, FaFire, FaStar, FaBell } from "react-icons/fa";
+import { FaEdit, FaCheck, FaPlus, FaTrash, FaClipboardList, FaRegCheckCircle, FaRegCircle, FaTimes, FaBars } from "react-icons/fa";
 import { AiFillDelete, AiOutlineLoading3Quarters, AiOutlineRocket } from "react-icons/ai";
-import { MdTask, MdDeleteSweep, MdAddTask, MdDashboard, MdPalette } from "react-icons/md";
-import { BsThreeDotsVertical, BsCalendarCheck, BsLightningFill } from "react-icons/bs";
+import { MdDeleteSweep, MdAddTask } from "react-icons/md";
+import { BsCalendarCheck, BsLightningFill } from "react-icons/bs";
 import { GiAchievement } from "react-icons/gi";
-import { TbBrandSpeedtest } from "react-icons/tb";
 import axios from "axios";
 import Navbar from "./Navbar";
 import { ToastContainer, toast } from "react-toastify";
@@ -17,50 +16,6 @@ function Todo({ setToken }) {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [colorTheme, setColorTheme] = useState("purple"); // purple, blue, green, orange
-
-  // Color themes
-  const themes = {
-    purple: {
-      primary: "from-purple-600 to-pink-600",
-      secondary: "from-indigo-600 to-purple-600",
-      accent: "from-violet-600 to-purple-600",
-      light: "from-purple-500/20 to-pink-500/20",
-      border: "border-purple-500/30",
-      text: "text-purple-400",
-      bg: "from-gray-900 via-purple-900 to-blue-900"
-    },
-    blue: {
-      primary: "from-blue-600 to-cyan-600",
-      secondary: "from-sky-600 to-blue-600",
-      accent: "from-teal-600 to-cyan-600",
-      light: "from-blue-500/20 to-cyan-500/20",
-      border: "border-blue-500/30",
-      text: "text-blue-400",
-      bg: "from-gray-900 via-blue-900 to-cyan-900"
-    },
-    green: {
-      primary: "from-emerald-600 to-green-600",
-      secondary: "from-lime-600 to-emerald-600",
-      accent: "from-green-600 to-emerald-600",
-      light: "from-emerald-500/20 to-green-500/20",
-      border: "border-emerald-500/30",
-      text: "text-emerald-400",
-      bg: "from-gray-900 via-emerald-900 to-green-900"
-    },
-    orange: {
-      primary: "from-orange-600 to-red-600",
-      secondary: "from-amber-600 to-orange-600",
-      accent: "from-red-600 to-orange-600",
-      light: "from-orange-500/20 to-red-500/20",
-      border: "border-orange-500/30",
-      text: "text-orange-400",
-      bg: "from-gray-900 via-orange-900 to-red-900"
-    }
-  };
-
-  const theme = themes[colorTheme];
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -73,34 +28,24 @@ function Todo({ setToken }) {
 
   const API = import.meta.env.VITE_API_BASE_URL;
 
-  // Check mobile screen
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   // Get all Todos
   const fetchTodos = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
       const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Please login again!");
+        return;
+      }
+
       const res = await axios.get(`${API}/todo/todos`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       setTodos(res.data.todos || []);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        setToken(null);
-        toast.error("Session expired. Please login again.");
+        toast.error("Unauthorized! Please login again.");
       } else {
         toast.error("Error fetching todos!");
       }
@@ -118,51 +63,55 @@ function Todo({ setToken }) {
   const filteredTodos = todos.filter(todo => {
     switch (activeTab) {
       case "active":
-        return !todo.selected;
+        return !todo.completed;
       case "completed":
-        return todo.selected;
+        return todo.completed;
       default:
         return true;
     }
   });
 
-  // Add Todo with animation
+  // Add Todo
   const handleAdd = async () => {
-    if (!todo.trim()) {
-      toast.warning("Please enter a todo!");
+    const trimmedTodo = todo.trim();
+    if (trimmedTodo.length < 3) {
+      toast.warning("Please enter at least 3 characters!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please login first!");
+      return;
+    }
+
+    // Duplicate check
+    const isDuplicate = todos.some(t => t.title.toLowerCase() === trimmedTodo.toLowerCase());
+    if (isDuplicate) {
+      toast.error("This todo already exists!");
       return;
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(`${API}/todo/add`, { title: todo }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const res = await axios.post(
+        `${API}/todo/add`,
+        { title: trimmedTodo },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setTodos([...todos, res.data.todo]);
       setTodo("");
-      toast.success("🎉 Todo Added Successfully!", {
-        icon: '🚀',
-        style: {
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        }
-      });
-      if (isMobile) setSidebarOpen(false);
+      toast.success("🎉 Todo Added Successfully!");
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.removeItem("token");
-        setToken(null);
-        toast.error("Session expired. Please login again.");
+        toast.error("Unauthorized! Please login again.");
       } else {
         toast.error("Error adding todo!");
       }
     }
   };
 
-  // Handle Enter key press
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && todo.length > 3) {
+    if (e.key === 'Enter' && todo.trim().length >= 3) {
       handleAdd();
     }
   };
@@ -177,12 +126,7 @@ function Todo({ setToken }) {
         }
       });
       setTodos(todos.filter((t) => t._id !== id));
-      toast.error("🗑️ Todo Deleted!", {
-        icon: '💥',
-        style: {
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        }
-      });
+      toast.error("🗑️ Todo Deleted!");
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
@@ -225,12 +169,7 @@ function Todo({ setToken }) {
       );
       setShowEditModal(false);
       setTodoToEdit(null);
-      toast.info("✨ Todo Updated!", {
-        icon: '🎯',
-        style: {
-          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        }
-      });
+      toast.info("✨ Todo Updated!");
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
@@ -242,18 +181,32 @@ function Todo({ setToken }) {
     }
   };
 
-  // Checkbox toggle
-  const handleCheckbox = (id) => {
-    setTodos(
-      todos.map((t) => (t._id === id ? { ...t, selected: !t.selected } : t))
-    );
+  const handleCompletedChange = async (todoId, currentStatus) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return toast.error("Please login again!");
+
+      const res = await axios.patch(
+        `${API}/todo/todos/${todoId}`,
+        { completed: !currentStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setTodos(prev =>
+        prev.map(t =>
+          t._id === todoId ? { ...t, completed: res.data.todo.completed } : t
+        )
+      );
+    } catch (err) {
+      toast.error("Failed to update todo!");
+      console.error(err);
+    }
   };
 
-  // Select all toggle
   const toggleSelectAll = () => {
     const newSelect = !selectAll;
     setSelectAll(newSelect);
-    setTodos(todos.map((t) => ({ ...t, selected: newSelect })));
+    setTodos(todos.map(t => ({ ...t, selected: newSelect })));
   };
 
   // Delete all selected
@@ -274,12 +227,7 @@ function Todo({ setToken }) {
       }
       setTodos(todos.filter((t) => !t.selected));
       setSelectAll(false);
-      toast.error(`🔥 ${selectedTodos.length} Todos Deleted!`, {
-        icon: '💥',
-        style: {
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        }
-      });
+      toast.error(`🔥 ${selectedTodos.length} Todos Deleted!`);
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
@@ -291,19 +239,8 @@ function Todo({ setToken }) {
     }
   };
 
-  // Change theme
-  const changeTheme = (newTheme) => {
-    setColorTheme(newTheme);
-    toast.success(`Theme changed to ${newTheme}!`, {
-      icon: '🎨',
-      style: {
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      }
-    });
-  };
-
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme.bg} transition-all duration-500`}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-teal-900 to-blue-900">
       <ToastContainer 
         position="top-right" 
         autoClose={3000} 
@@ -312,83 +249,46 @@ function Todo({ setToken }) {
         toastStyle={{
           borderRadius: '12px',
           backdropFilter: 'blur(10px)',
-          background: 'rgba(30, 30, 40, 0.9)',
+          background: 'rgba(15, 25, 35, 0.9)',
         }}
       />
       <Navbar setToken={setToken} />
 
-      {/* Theme Selector */}
-      <div className="fixed top-24 right-4 z-50 flex flex-col gap-2">
-        <button
-          onClick={() => changeTheme("purple")}
-          className={`p-2 rounded-full ${colorTheme === "purple" ? "bg-purple-600 ring-2 ring-purple-400" : "bg-gray-800/80"} backdrop-blur-sm`}
-          title="Purple Theme"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
-        </button>
-        <button
-          onClick={() => changeTheme("blue")}
-          className={`p-2 rounded-full ${colorTheme === "blue" ? "bg-blue-600 ring-2 ring-blue-400" : "bg-gray-800/80"} backdrop-blur-sm`}
-          title="Blue Theme"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500"></div>
-        </button>
-        <button
-          onClick={() => changeTheme("green")}
-          className={`p-2 rounded-full ${colorTheme === "green" ? "bg-emerald-600 ring-2 ring-emerald-400" : "bg-gray-800/80"} backdrop-blur-sm`}
-          title="Green Theme"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-green-500"></div>
-        </button>
-        <button
-          onClick={() => changeTheme("orange")}
-          className={`p-2 rounded-full ${colorTheme === "orange" ? "bg-orange-600 ring-2 ring-orange-400" : "bg-gray-800/80"} backdrop-blur-sm`}
-          title="Orange Theme"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-red-500"></div>
-        </button>
-      </div>
-
       {/* Mobile Sidebar Toggle */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className="lg:hidden fixed top-24 left-4 z-40 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-full shadow-2xl animate-pulse hover:animate-none transition-all duration-300 hover:scale-110"
+        className="lg:hidden fixed top-24 left-4 z-40 bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-3 rounded-full shadow-lg hover:shadow-teal-500/50 transition-all"
       >
         <FaBars className="text-xl" />
       </button>
 
       {/* Mobile Add Button */}
       <button
-        onClick={() => {
-          setTodo("");
-          if (isMobile) {
-            setSidebarOpen(true);
-          }
-        }}
-        className="lg:hidden fixed bottom-6 right-6 z-40 bg-gradient-to-r from-emerald-600 to-green-600 text-white p-4 rounded-full shadow-2xl animate-bounce hover:animate-none transition-all duration-300 hover:scale-110"
+        onClick={() => setSidebarOpen(true)}
+        className="lg:hidden fixed bottom-6 right-6 z-40 bg-gradient-to-r from-teal-600 to-cyan-600 text-white p-4 rounded-full shadow-lg hover:shadow-teal-500/50 transition-all"
       >
         <FaPlus className="text-2xl" />
       </button>
 
-      {/* Main Container - Full Screen */}
-      <div className="flex h-[calc(100vh-80px)] pt-20 md:pt-24">
+      {/* Main Container */}
+      <div className="flex h-[calc(100vh-80px)] pt-20">
         {/* Sidebar - Add Todo Section */}
         <div className={`
           fixed lg:static inset-y-0 left-0 z-30
-          w-full sm:w-80 bg-gray-800/90 backdrop-blur-xl border-r ${theme.border} transform transition-transform duration-300 ease-in-out
+          w-full sm:w-80 lg:w-96 bg-gray-800/95 backdrop-blur-xl border-r border-teal-500/30 transform transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           <div className="h-full flex flex-col">
             {/* Sidebar Header */}
-            <div className="p-4 sm:p-6 border-b border-gray-700/50">
+            <div className="p-4 sm:p-6 border-b border-teal-500/30">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <MdAddTask className={`${theme.text} animate-pulse`} />
+                  <MdAddTask className="text-teal-400" />
                   Create Task
                 </h2>
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  className="lg:hidden text-gray-400 hover:text-white p-2 hover:bg-gray-700/50 rounded-lg transition-all"
+                  className="lg:hidden text-gray-400 hover:text-white p-2 hover:bg-teal-500/20 rounded-lg transition-all"
                 >
                   <FaTimes className="text-lg" />
                 </button>
@@ -402,99 +302,94 @@ function Todo({ setToken }) {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Task Description
                   </label>
-                  <div className="relative group">
+                  <div className="relative">
                     <input
                       onChange={(e) => setTodo(e.target.value)}
                       onKeyPress={handleKeyPress}
                       value={todo}
                       type="text"
                       placeholder="What needs to be done?"
-                      className="w-full bg-gray-700/50 backdrop-blur-sm border border-gray-600/50 rounded-2xl px-4 py-3 pl-12 outline-none text-white placeholder-gray-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all text-sm sm:text-base"
+                      className="w-full bg-gray-700/50 border border-teal-500/30 rounded-lg px-4 py-3 pl-12 outline-none text-white placeholder-gray-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
                     />
-                    <FaPlus className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+                    <FaPlus className="absolute left-4 top-1/2 transform -translate-y-1/2 text-teal-400" />
                   </div>
                   
                   <div className="flex items-center justify-between mt-2 text-xs">
                     <span className="text-gray-400">
                       {todo.length > 0 ? `${todo.length}/3 characters` : "Min. 3 characters"}
                     </span>
-                    <span className={`font-medium flex items-center gap-1 ${
-                      todo.length >= 3 ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {todo.length >= 3 ? <><FaCheck /> Ready</> : 'Too short'}
+                    <span className={`font-medium ${todo.length >= 3 ? 'text-green-400' : 'text-red-400'}`}>
+                      {todo.length >= 3 ? '✓ Ready' : 'Too short'}
                     </span>
                   </div>
                 </div>
                 
                 <button
                   onClick={handleAdd}
-                  disabled={todo.length <= 3}
-                  className={`w-full bg-gradient-to-r ${theme.primary} hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold px-4 sm:px-6 py-3 rounded-2xl transition-all transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed shadow-xl flex items-center gap-2 justify-center group text-sm sm:text-base relative overflow-hidden`}
+                  disabled={todo.trim().length < 3}
+                  className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold px-4 sm:px-6 py-3 rounded-lg transition-all flex items-center gap-2 justify-center shadow-lg hover:shadow-teal-500/30"
                 >
-                  <span className="relative z-10">
-                    <FaPlus className="group-hover:rotate-90 transition-transform duration-300" />
-                  </span>
-                  <span className="relative z-10">Add New Task</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                  <FaPlus />
+                  Add New Task
                 </button>
 
                 {/* Quick Stats */}
-                <div className="bg-gray-700/30 backdrop-blur-sm rounded-2xl p-4 border border-gray-600/30">
+                <div className="bg-gray-700/30 rounded-lg p-4 border border-teal-500/30">
                   <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                    <GiAchievement className="text-yellow-400" />
+                    <GiAchievement className="text-amber-400" />
                     Quick Stats
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 flex items-center gap-2">
-                        <FaClipboardList />
+                        <FaClipboardList className="text-teal-400" />
                         Total Tasks
                       </span>
                       <span className="text-white font-bold text-lg">{todos.length}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 flex items-center gap-2">
-                        <FaRegCheckCircle className="text-green-400" />
+                        <FaRegCheckCircle className="text-emerald-400" />
                         Completed
                       </span>
-                      <span className="text-green-400 font-bold text-lg">
-                        {todos.filter(t => t.selected).length}
+                      <span className="text-emerald-400 font-bold text-lg">
+                        {todos.filter(t => t.completed).length}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 flex items-center gap-2">
-                        <FaRegCircle className="text-orange-400" />
+                        <FaRegCircle className="text-amber-400" />
                         Pending
                       </span>
-                      <span className="text-orange-400 font-bold text-lg">
-                        {todos.filter(t => !t.selected).length}
+                      <span className="text-amber-400 font-bold text-lg">
+                        {todos.filter(t => !t.completed).length}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-gray-700/30 backdrop-blur-sm rounded-2xl p-4 border border-gray-600/30">
+                <div className="bg-gray-700/30 rounded-lg p-4 border border-teal-500/30">
                   <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                    <BsLightningFill className="text-yellow-400" />
+                    <BsLightningFill className="text-amber-400" />
                     Quick Actions
                   </h3>
                   <div className="space-y-2">
                     <button
                       onClick={toggleSelectAll}
-                      className="w-full text-left px-3 py-3 rounded-xl hover:bg-gray-600/50 text-gray-300 hover:text-white transition-all duration-300 flex items-center gap-2 group hover:translate-x-2"
+                      className="w-full text-left px-3 py-3 rounded-lg hover:bg-teal-500/20 text-gray-300 hover:text-white transition-all flex items-center gap-2"
                     >
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${theme.light} ${theme.border} border`}>
-                        <FaClipboardList className="text-white" />
+                      <div className="p-2 rounded-lg bg-teal-500/20 border border-teal-500/30">
+                        <FaClipboardList className="text-teal-400" />
                       </div>
                       <span>{selectAll ? 'Deselect All' : 'Select All'}</span>
                     </button>
                     <button
                       onClick={handleDeleteAll}
                       disabled={!todos.some(t => t.selected)}
-                      className="w-full text-left px-3 py-3 rounded-xl hover:bg-red-600/20 disabled:hover:bg-gray-600/50 text-gray-300 hover:text-white disabled:text-gray-500 transition-all duration-300 flex items-center gap-2 group hover:translate-x-2"
+                      className="w-full text-left px-3 py-3 rounded-lg hover:bg-red-600/20 disabled:hover:bg-gray-600/50 text-gray-300 hover:text-white disabled:text-gray-500 transition-all flex items-center gap-2"
                     >
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-red-500/20 to-pink-500/20 border border-red-500/30">
+                      <div className="p-2 rounded-lg bg-red-500/20 border border-red-500/30">
                         <MdDeleteSweep className="text-red-400" />
                       </div>
                       <span>Delete Selected</span>
@@ -509,7 +404,7 @@ function Todo({ setToken }) {
         {/* Overlay for mobile sidebar */}
         {sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 lg:hidden transition-all duration-300"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -517,40 +412,38 @@ function Todo({ setToken }) {
         {/* Main Content - Todos List */}
         <div className="flex-1 flex flex-col overflow-hidden w-full">
           {/* Header */}
-          <div className="bg-gray-800/30 backdrop-blur-sm border-b border-gray-700/30 p-4 sm:p-6">
+          <div className="bg-gray-800/30 border-b border-teal-500/30 p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center gap-3 flex-wrap">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
-                    <BsCalendarCheck className="text-purple-400" />
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-500/30">
+                    <BsCalendarCheck className="text-teal-400" />
                   </div>
-                  <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    My Task Manager
-                  </span>
-                  <span className={`bg-gradient-to-r ${theme.primary} text-white text-xs sm:text-sm px-3 py-1.5 rounded-full animate-pulse`}>
+                  <span>My Task Manager</span>
+                  <span className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-xs sm:text-sm px-3 py-1.5 rounded-full">
                     {filteredTodos.length} tasks
                   </span>
                 </h1>
                 <p className="text-gray-400 mt-2 text-sm sm:text-base flex items-center gap-2">
-                  <AiOutlineRocket className="text-purple-400" />
+                  <AiOutlineRocket className="text-teal-400" />
                   Manage your daily tasks efficiently
                 </p>
               </div>
 
               {/* Tabs */}
-              <div className="flex bg-gray-800/50 backdrop-blur-sm rounded-xl p-1 w-full sm:w-auto overflow-x-auto">
+              <div className="flex bg-gray-800/50 rounded-lg p-1 w-full sm:w-auto overflow-x-auto">
                 {[
-                  { key: "all", label: "All", count: todos.length, icon: <FaClipboardList /> },
-                  { key: "active", label: "Active", count: todos.filter(t => !t.selected).length, icon: <FaFire className="text-orange-400" /> },
-                  { key: "completed", label: "Completed", count: todos.filter(t => t.selected).length, icon: <FaStar className="text-yellow-400" /> }
+                  { key: "all", label: "All", count: todos.length, icon: <FaClipboardList className="text-teal-400" /> },
+                  { key: "active", label: "Active", count: todos.filter(t => !t.completed).length },
+                  { key: "completed", label: "Completed", count: todos.filter(t => t.completed).length }
                 ].map((tab) => (
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
+                    className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                       activeTab === tab.key
-                        ? `bg-gradient-to-r ${theme.primary} text-white shadow-lg`
-                        : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                        ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg'
+                        : 'text-gray-300 hover:text-white hover:bg-teal-500/20'
                     }`}
                   >
                     {tab.icon}
@@ -567,43 +460,43 @@ function Todo({ setToken }) {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
-            <div className={`bg-gradient-to-br ${theme.light} backdrop-blur-sm rounded-2xl p-4 sm:p-6 border ${theme.border} hover:scale-105 transition-all duration-300`}>
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${theme.primary}`}>
-                  <FaClipboardList className="text-xl sm:text-2xl text-white" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-6">
+            <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-teal-500/30 hover:border-teal-400/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-teal-600 to-cyan-600">
+                  <FaClipboardList className="text-2xl text-white" />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-bold text-white">{todos.length}</p>
-                  <p className={`${theme.text} text-xs sm:text-sm`}>Total Tasks</p>
+                  <p className="text-teal-400 text-sm">Total Tasks</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-gradient-to-br from-emerald-500/20 to-green-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-emerald-500/30 hover:scale-105 transition-all duration-300">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500">
-                  <FaRegCheckCircle className="text-xl sm:text-2xl text-white" />
+            <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-emerald-500/30 hover:border-emerald-400/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500">
+                  <FaRegCheckCircle className="text-2xl text-white" />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-bold text-white">
-                    {todos.filter(t => t.selected).length}
+                    {todos.filter(t => t.completed).length}
                   </p>
-                  <p className="text-emerald-300 text-xs sm:text-sm">Completed</p>
+                  <p className="text-emerald-300 text-sm">Completed</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-orange-500/30 hover:scale-105 transition-all duration-300">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500">
-                  <FaRegCircle className="text-xl sm:text-2xl text-white" />
+            <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-amber-500/30 hover:border-amber-400/50 transition-all">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
+                  <FaRegCircle className="text-2xl text-white" />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-bold text-white">
-                    {todos.filter(t => !t.selected).length}
+                    {todos.filter(t => !t.completed).length}
                   </p>
-                  <p className="text-orange-300 text-xs sm:text-sm">Pending</p>
+                  <p className="text-amber-300 text-sm">Pending</p>
                 </div>
               </div>
             </div>
@@ -611,19 +504,19 @@ function Todo({ setToken }) {
 
           {/* Todos List */}
           <div className="flex-1 overflow-hidden p-4 sm:p-6">
-            <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl border border-gray-700/30 h-full flex flex-col shadow-2xl">
+            <div className="bg-gray-800/30 rounded-xl border border-teal-500/30 h-full flex flex-col">
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <AiOutlineLoading3Quarters className="animate-spin text-3xl sm:text-4xl text-purple-400 mx-auto mb-4" />
-                      <p className="text-gray-400 text-sm sm:text-base animate-pulse">Loading your tasks...</p>
+                      <AiOutlineLoading3Quarters className="animate-spin text-3xl sm:text-4xl text-teal-400 mx-auto mb-4" />
+                      <p className="text-gray-400 text-sm sm:text-base">Loading your tasks...</p>
                     </div>
                   </div>
                 ) : filteredTodos.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <div className="text-6xl mb-4 text-gray-600 animate-bounce">📝</div>
+                      <div className="text-6xl mb-4 text-gray-600">📝</div>
                       <h3 className="text-lg sm:text-xl font-semibold text-gray-300 mb-2">
                         {activeTab === "all" ? "No tasks yet" : 
                          activeTab === "active" ? "No active tasks" : "No completed tasks"}
@@ -636,35 +529,32 @@ function Todo({ setToken }) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredTodos.map((item, index) => (
+                    {filteredTodos.map((item) => (
                       <div 
                         key={item._id} 
-                        className="group flex items-center gap-3 sm:gap-4 p-4 rounded-2xl bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-purple-500/50 hover:from-purple-900/20 hover:to-gray-900/50 transition-all duration-300 backdrop-blur-sm hover:shadow-xl hover:scale-[1.02]"
-                        style={{ animationDelay: `${index * 100}ms` }}
+                        className="group flex items-center gap-4 p-4 rounded-xl bg-gray-800/50 border border-teal-500/20 hover:border-teal-400/50 transition-all hover:bg-teal-500/5"
                       >
                         <button
-                          onClick={() => handleCheckbox(item._id)}
-                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300 hover:scale-110 ${
-                            item.selected
-                              ? 'bg-gradient-to-br from-green-500 to-emerald-500 border-green-400 text-white shadow-lg'
-                              : 'border-gray-500 hover:border-purple-400 text-transparent hover:shadow-purple-500/20 hover:shadow-lg'
+                          onClick={() => handleCompletedChange(item._id, item.completed)}
+                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                            item.completed
+                              ? 'bg-gradient-to-br from-emerald-500 to-green-500 border-emerald-400 text-white'
+                              : 'border-gray-500 hover:border-teal-400'
                           }`}
                         >
-                          {item.selected && <FaCheck className="text-xs" />}
+                          {item.completed && <FaCheck className="text-xs" />}
                         </button>
                         
-                        <span className={`flex-1 text-sm sm:text-base break-words transition-all duration-300 ${
-                          item.selected 
-                            ? "line-through text-gray-500" 
-                            : "text-white font-medium"
+                        <span className={`flex-1 text-sm sm:text-base break-words ${
+                          item.completed ? "line-through text-gray-500" : "text-white font-medium"
                         }`}>
                           {item.title}
                         </span>
 
-                        <div className="flex items-center gap-1 sm:gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => confirmEditTodo(item._id, item.title)}
-                            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded-xl transition-all duration-300 hover:scale-110"
+                            className="p-2 text-gray-400 hover:text-teal-400 hover:bg-teal-500/20 rounded-lg transition-all"
                             title="Edit task"
                           >
                             <FaEdit className="w-4 h-4" />
@@ -672,7 +562,7 @@ function Todo({ setToken }) {
 
                           <button
                             onClick={() => confirmDeleteTodo(item._id)}
-                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-xl transition-all duration-300 hover:scale-110"
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
                             title="Delete task"
                           >
                             <AiFillDelete className="w-4 h-4" />
@@ -690,17 +580,17 @@ function Todo({ setToken }) {
 
       {/* Delete Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 text-center shadow-2xl border border-gray-700/50 backdrop-blur-xl animate-slideUp">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
-              <FaTrash className="text-2xl text-red-400 animate-pulse" />
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-sm mx-4 text-center border border-teal-500/30">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+              <FaTrash className="text-2xl text-red-400" />
             </div>
             <h2 className="text-xl font-bold mb-2 text-white">Delete Task</h2>
             <p className="text-gray-400 mb-6">This action cannot be undone. Are you sure?</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 bg-gray-700/50 hover:bg-gray-600/50 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all"
               >
                 Cancel
               </button>
@@ -709,7 +599,7 @@ function Todo({ setToken }) {
                   handleDelete(todoToDelete);
                   setShowDeleteModal(false);
                 }}
-                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:opacity-90 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:opacity-90 text-white px-4 py-3 rounded-lg font-semibold transition-all"
               >
                 Delete
               </button>
@@ -720,10 +610,10 @@ function Todo({ setToken }) {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 text-center shadow-2xl border border-gray-700/50 backdrop-blur-xl animate-slideUp">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/30">
-              <FaEdit className="text-2xl text-blue-400" />
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-sm mx-4 text-center border border-teal-500/30">
+            <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal-500/30">
+              <FaEdit className="text-2xl text-teal-400" />
             </div>
             <h2 className="text-xl font-bold mb-2 text-white">Edit Task</h2>
             <input
@@ -731,20 +621,20 @@ function Todo({ setToken }) {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleEditSave()}
-              className="w-full bg-gray-700/50 border border-gray-600/50 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 text-white placeholder-gray-400 text-sm sm:text-base backdrop-blur-sm"
+              className="w-full bg-gray-700 border border-teal-500/30 rounded-lg px-4 py-3 mb-6 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 text-white placeholder-gray-400 transition-all"
               placeholder="Enter task title..."
               autoFocus
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="flex-1 bg-gray-700/50 hover:bg-gray-600/50 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditSave}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:opacity-90 text-white px-4 py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105"
+                className="flex-1 bg-gradient-to-r from-teal-600 to-cyan-600 hover:opacity-90 text-white px-4 py-3 rounded-lg font-semibold transition-all"
               >
                 Save
               </button>
