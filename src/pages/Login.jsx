@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { auth, googleProvider } from "../firebase.jsx";
-import { signInWithPopup } from "firebase/auth";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle,  } from "react-icons/fa";
 
 const Login = ({ setToken }) => {
@@ -215,7 +213,7 @@ console.log("API URL 👉", API);
                 <div className="flex-grow h-px bg-gray-700" />
               </div>
               <button 
-                onClick={handleGoogleLogin}
+                // onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-xl border border-gray-300 transition-all duration-300"
               >
                 <FaGoogle className="text-red-500" />
