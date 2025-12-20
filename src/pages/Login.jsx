@@ -9,7 +9,7 @@ import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle,  } from "react
 const Login = ({ setToken }) => {
   const nav = useNavigate();
 const API = import.meta.env.VITE_API_BASE_URL;
-console.log("API URL ", API);
+console.log("API URL 👉", API);
   const [state, setState] = useState("Login"); // Default to Login
   const [formData, setFormData] = useState({
     name: "",
@@ -28,28 +28,28 @@ console.log("API URL ", API);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
+  // const handleGoogleLogin = async () => {
+  //   try {
+  //     const result = await signInWithPopup(auth, googleProvider);
+  //     const idToken = await result.user.getIdToken();
       
-      const res = await axios.post(`${API}/auth/google`, { idToken });
+  //     const res = await axios.post(`${API}/auth/google`, { idToken });
       
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-      localStorage.setItem("role", res.data.user.role);
+  //     localStorage.setItem("token", res.data.token);
+  //     localStorage.setItem("user", JSON.stringify(res.data.user));
+  //     localStorage.setItem("role", res.data.user.role);
       
-      if (setToken) setToken(res.data.token);
+  //     if (setToken) setToken(res.data.token);
       
-      toast.success("Google login successful ✅");
+  //     toast.success("Google login successful ✅");
       
-      if (res.data.user.role === "admin") window.location.href = "/admin";
-      else window.location.href = "/home";
+  //     if (res.data.user.role === "admin") window.location.href = "/admin";
+  //     else window.location.href = "/home";
       
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Google login failed");
-    }
-  };
+  //   } catch (error) {
+  //     toast.error(error.response?.data?.message || "Google login failed");
+  //   }
+  // };
 
   const handleForgotPassword = () => nav("/reset-password");
 
