@@ -4,12 +4,12 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { auth, googleProvider } from "../firebase.jsx";
 import { signInWithPopup } from "firebase/auth";
-import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle, FaTasks } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle,  } from "react-icons/fa";
 
 const Login = ({ setToken }) => {
   const nav = useNavigate();
-  const API = import.meta.env.VITE_API_BASE_URL;
-
+const API = import.meta.env.VITE_API_BASE_URL;
+console.log("API URL ", API);
   const [state, setState] = useState("Login"); // Default to Login
   const [formData, setFormData] = useState({
     name: "",
