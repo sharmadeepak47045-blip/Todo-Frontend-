@@ -1,19 +1,20 @@
-// AdminPanel.jsx
 import  { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom"; 
 
-// ---------------------- Admin Navbar Component ----------------------
 const AdminNavbar = ({ activeTab, setActiveTab }) => {
   const tabs = ["Dashboard", "Users", "Feedback"];
   const navigate = useNavigate();
+
+  const API = import.meta.env.VITE_API_BASE_URL;
+
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     toast.success("Logged out successfully");
     setTimeout(() => {
-      navigate("/login"); // ✅ Use navigate instead of window.location
+      navigate("/login"); 
     }, 500);
   };
 
@@ -47,7 +48,6 @@ const AdminNavbar = ({ activeTab, setActiveTab }) => {
   );
 };
 
-// ---------------------- Stats Card Component ----------------------
 const StatsCard = ({ title, value }) => (
   <div className="bg-white shadow-lg p-6 rounded-lg text-center border border-gray-200 hover:shadow-xl transition-shadow">
     <h2 className="text-gray-600 text-lg font-medium">{title}</h2>
@@ -55,7 +55,6 @@ const StatsCard = ({ title, value }) => (
   </div>
 );
 
-// ---------------------- Main Admin Component ----------------------
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [stats, setStats] = useState({});
@@ -64,7 +63,6 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // ✅ Authentication Check
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -86,7 +84,6 @@ export default function Admin() {
 
   const token = localStorage.getItem("token");
 
-  // ---------------- Fetch Functions ----------------
   const fetchStats = async () => {
     try {
       const res = await fetch("http://localhost:5000/admin/stats", {
@@ -153,7 +150,6 @@ export default function Admin() {
     }
   };
 
-  // ---------------- Load all data ----------------
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -163,13 +159,11 @@ export default function Admin() {
       setLoading(false);
     };
     
-    // Only load data if user is admin
     if (localStorage.getItem("role") === "admin") {
       loadData();
     }
   }, []);
 
-  // ---------------- Action Functions ----------------
   const updateRole = async (id, role) => {
     if (!window.confirm(`Are you sure you want to change this user's role to ${role}?`)) {
       return;
@@ -256,7 +250,6 @@ export default function Admin() {
     }
   };
 
-  // ---------------- Render ----------------
   return (
     <div className="min-h-screen bg-gray-100">
       <Toaster position="top-center" reverseOrder={false} />
@@ -270,7 +263,6 @@ export default function Admin() {
           </div>
         ) : (
           <>
-            {/* ---------------- Dashboard Tab ---------------- */}
             {activeTab === "Dashboard" && (
               <>
                 <h1 className="text-2xl font-bold mb-6 text-gray-800">Admin Dashboard</h1>

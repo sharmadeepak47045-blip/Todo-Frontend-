@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../firebase";
 import toast from "react-hot-toast";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaGoogle,  } from "react-icons/fa";
 
@@ -26,28 +28,39 @@ console.log("API URL 👉", API);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // const handleGoogleLogin = async () => {
-  //   try {
-  //     const result = await signInWithPopup(auth, googleProvider);
-  //     const idToken = await result.user.getIdToken();
-      
-  //     const res = await axios.post(`${API}/auth/google`, { idToken });
-      
-  //     localStorage.setItem("token", res.data.token);
-  //     localStorage.setItem("user", JSON.stringify(res.data.user));
-  //     localStorage.setItem("role", res.data.user.role);
-      
-  //     if (setToken) setToken(res.data.token);
-      
-  //     toast.success("Google login successful ✅");
-      
-  //     if (res.data.user.role === "admin") window.location.href = "/admin";
-  //     else window.location.href = "/home";
-      
-  //   } catch (error) {
-  //     toast.error(error.response?.data?.message || "Google login failed");
-  //   }
-  // };
+  const handleGoogleLogin = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+
+    // Get Firebase ID token
+    const idToken = await result.user.getIdToken();
+
+    // ✅ Make sure headers are correct
+    const res = await axios.post(
+      `${API}/auth/google`,
+      { idToken },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    // Store user info & token
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+    localStorage.setItem("role", res.data.user.role);
+
+    if (setToken) setToken(res.data.token);
+
+    toast.success("Google login successful ✅");
+
+    // Redirect based on role
+    if (res.data.user.role === "admin") window.location.href = "/admin";
+    else window.location.href = "/home";
+
+  } catch (error) {
+    console.error("Google Login Error:", error);
+    toast.error(error.response?.data?.message || "Google login failed");
+  }
+};
+
 
   const handleForgotPassword = () => nav("/reset-password");
 
@@ -213,7 +226,7 @@ console.log("API URL 👉", API);
                 <div className="flex-grow h-px bg-gray-700" />
               </div>
               <button 
-                // onClick={handleGoogleLogin}
+                onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-medium rounded-xl border border-gray-300 transition-all duration-300"
               >
                 <FaGoogle className="text-red-500" />
