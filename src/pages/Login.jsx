@@ -34,6 +34,8 @@ console.log("API URL 👉", API);
 
     // Get Firebase ID token
     const idToken = await result.user.getIdToken();
+    console.log("🔥 Google ID Token:", idToken);  // ✅ Ye line add karo
+
 
     // ✅ Make sure headers are correct
     const res = await axios.post(
